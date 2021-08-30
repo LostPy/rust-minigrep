@@ -12,22 +12,19 @@ pub struct Config {
 
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Self, &'static str> {
-        if args.len() < 3 {
-            return Err("args must be have 3 values or more!");
-        }
-        let pattern = args[1].clone();
-        let file = args[2].clone();
+    pub fn new(mut args: env::Args) -> Result<Self, &'static str> {
+        args.next();
 
-        let mut case_sensitive = true;
+        let pattern = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Missing the 'pattern' argument"),
+        };
+        let file = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Missing the 'file' argument"),
+        };
 
-        if args.contains(&String::from("--no-case-sensitive")) {
-            case_sensitive = false;
-        } else if args.contains(&String::from("--case-sensitive")) {
-            case_sensitive = true;
-        } else {
-            case_sensitive = env::var("MINIGREP_CASE_INSENSITIVE").is_err();
-        }
+        let case_sensitive = env::var("MINIGREP_CASE_INSENSITIVE").is_err();
 
         Ok(Self {pattern, file, case_sensitive})
     }
@@ -53,29 +50,18 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
 
 pub fn search_case_sensitive<'a>(pattern: &str, text: &'a str) -> Vec<&'a str> {
-    let mut result = Vec::new();
-
-    for line in text.lines() {
-        if line.contains(pattern) {
-            result.push(line);
-        }
-    }
-
-    result
+    text
+        .lines()
+        .filter(|line| line.contains(pattern))
+        .collect()
 }
 
 pub fn search_case_insensitive<'a>(pattern: &str, text: &'a str) -> Vec<&'a str> {
-    let mut result = Vec::new();
-
     let pattern = pattern.to_lowercase();
-
-    for line in text.lines() {
-        if line.to_lowercase().contains(&pattern) {
-            result.push(line);
-        }
-    }
-
-    result
+    text
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&pattern))
+        .collect()
 }
 
 
